@@ -18,12 +18,13 @@ This is a small desktop-app using **Pygame** that lets you create & visualize gr
     ```
 ## File Structure:
 ```bash
-my_project/
-│── main.py              # Main script
+project_folder/
+│── main.py              # run this
+│── old versions/        # not relevant, lesser features
 │── assets/  
 │   ├── fonts/  
 │   │   ├── UbuntuMono-Regular.ttf  
-│── README.md            # This file
+│── README.md            
 ```
 
 ## TODO
