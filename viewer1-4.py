@@ -243,10 +243,8 @@ while running:
                     for edge in edge_set:
                         if is_mouse_on_edge(pg.mouse.get_pos(), edge[0], edge[1]):
                             # delete
-                            """
                             edge[0].remove_edge(edge[1])
                             edge[1].remove_edge(edge[0])
-                            """
                             edge_set.remove(edge)
                         
 
