@@ -18,8 +18,9 @@ This is a small desktop-app using **Pygame** that lets you create & visualize gr
     ```
 ## File Structure:
 ```bash
-project_folder/
+main_folder/
 │── main.py              # run this
+│── vertex.py            # vertices as a data structure
 │── old versions/        # not relevant, lesser features
 │── assets/  
 │   ├── fonts/  
