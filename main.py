@@ -1,5 +1,7 @@
 import pygame as pg
 from vertex import Vertex
+import math
+
 # Initialize pg
 pg.init()
 # Screen settings
@@ -123,9 +125,47 @@ def draw_menu(width, height):
         text_y += text_spacing
 
 
-def draw_edge(v1:Vertex, v2:Vertex):
+def draw_undirected_edge(v1:Vertex, v2:Vertex):
     if(v1 != None and v2 != None):
         pg.draw.line(screen, BLACK, v1.pos, v2.pos, EDGE_THICKNESS)
+
+ 
+
+def draw_directed_edge(v1, v2):
+    if v1 is not None and v2 is not None:
+        # Compute the direction vector
+        dx, dy = v2.pos[0] - v1.pos[0], v2.pos[1] - v1.pos[1]
+        length = math.sqrt(dx**2 + dy**2)
+        if length == 0:
+            return  # Avoid division by zero
+
+        # Normalize the direction vector
+        ux, uy = dx / length, dy / length
+
+        # Adjust the endpoint to be CIRCLE_RADIUS away from v2
+        v2_adjusted = (
+            v2.pos[0] - ux * CIRCLE_RADIUS,
+            v2.pos[1] - uy * CIRCLE_RADIUS
+        )
+
+        # Draw the main line up to the adjusted point
+        pg.draw.line(screen, BLACK, v1.pos, v2_adjusted, EDGE_THICKNESS)
+
+        # Arrowhead parameters
+        arrow_length = 10  # Length of the arrow
+        arrow_angle = math.radians(30)  # Angle of arrow wings
+
+        # Compute two points for the arrowhead
+        left_x = v2_adjusted[0] - arrow_length * (ux * math.cos(arrow_angle) - uy * math.sin(arrow_angle))
+        left_y = v2_adjusted[1] - arrow_length * (uy * math.cos(arrow_angle) + ux * math.sin(arrow_angle))
+
+        right_x = v2_adjusted[0] - arrow_length * (ux * math.cos(-arrow_angle) - uy * math.sin(-arrow_angle))
+        right_y = v2_adjusted[1] - arrow_length * (uy * math.cos(-arrow_angle) + ux * math.sin(-arrow_angle))
+
+        # Draw the arrowhead as two small lines
+        pg.draw.line(screen, BLACK, v2_adjusted, (left_x, left_y), EDGE_THICKNESS)
+        pg.draw.line(screen, BLACK, v2_adjusted, (right_x, right_y), EDGE_THICKNESS)
+
 
 def assign_indices():
     for i in range(len(circles)):
@@ -232,11 +272,25 @@ while running:
                                     # restore color for previously selected vertex
                                     selected_vertex.color = saved_color
 
-                                    # logically add the edges
-                                    selected_vertex.add_edge(circle)
-                                    circle.add_edge(selected_vertex)
 
-                                    edge_set.append([circle,selected_vertex])
+                                    # directed graph, only add if the exact isn't already in there
+                                    if directed_mode:
+                                        if (selected_vertex, circle) not in edge_set:
+                                            edge_set.append((selected_vertex,circle))
+                                            selected_vertex.add_edge(circle)
+
+                                        else:
+                                            print(f"edge {selected_vertex.index, circle.index} already exists!")
+                                    
+                                    # undirected graph, don't add if already exists
+                                    else:
+                                        if (selected_vertex, circle) not in edge_set and (circle, selected_vertex) not in edge_set :
+                                            edge_set.append((selected_vertex, circle))
+                                            selected_vertex.add_edge(circle)
+                                            circle.add_edge(selected_vertex)
+                                        else:
+                                            print(f"edge {selected_vertex.index, circle.index} already exists!")
+
 
                                     # reset selected vertex
                                     selected_vertex = None
@@ -319,8 +373,12 @@ while running:
 
     # Draw all edges
     for edge in edge_set:
-        draw_edge(edge[0], edge[1])
-        
+        if directed_mode:
+            draw_directed_edge(edge[0], edge[1])
+        else:
+            draw_undirected_edge(edge[0], edge[1])
+
+
     # Draw all circles
     for circle in circles:
         pg.draw.circle(screen, circle.color, circle.pos, CIRCLE_RADIUS)
