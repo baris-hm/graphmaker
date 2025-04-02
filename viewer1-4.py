@@ -8,7 +8,9 @@ screen = pg.display.set_mode((WIDTH, HEIGHT), pg.RESIZABLE)
 pg.display.set_caption("graphmaker -version 1.4")
 
 # Initialize font
-font = pg.font.Font(None, 30)  # Default font, size 30
+font_path = "assets/fonts/UbuntuMono-Regular.ttf"  # Adjust path if needed
+
+font = pg.font.Font(font_path, 30)  # Default font, size 30
 # Constants
 EDGE_THICKNESS = 3
 CIRCLE_RADIUS = 50
@@ -47,7 +49,37 @@ saved_color = WHITE
 def button_rect(width):
     return pg.Rect(width-(MANUAL_BUTTON_SIZE+10), 10, MANUAL_BUTTON_SIZE, MANUAL_BUTTON_SIZE)  # Manual button
 
+# toggles
 menu_open = False
+directed_mode = False
+weighted_mode = False
+
+
+def draw_settings(width, height):
+    menu_width, menu_height = width // 6, height // 10
+    menu_x, menu_y = 20, 20
+    menu_rect = pg.Rect(menu_x, menu_y, menu_width, menu_height)
+    
+    # Draw menu background
+    pg.draw.rect(screen, GRAY, menu_rect, border_radius=15)
+    pg.draw.rect(screen, BLACK, menu_rect, 3, border_radius=15)
+    
+    body_font = pg.font.Font(font_path, max(30, height // 40))
+
+    
+    # texts
+    texts = [
+        "",
+        f"Weighted Mode: {'On' if weighted_mode else 'Off'}", 
+        f"Directed Mode: {'On' if directed_mode else 'Off'}"
+    ]
+    
+    text_y = menu_y
+    text_spacing = max(25, height // 40)  # Adjusts spacing based on screen size
+    for text in texts:
+        text_surface = body_font.render(text, True, BLACK)
+        screen.blit(text_surface, (menu_x + menu_width/2 - (len(text) / 2 * max(30, height // 40) * 0.5), text_y))
+        text_y += text_spacing    
 
 def draw_menu(width, height):
     menu_width, menu_height = width // 2, height // 2
@@ -59,8 +91,8 @@ def draw_menu(width, height):
     pg.draw.rect(screen, BLACK, menu_rect, 3, border_radius=15)
     
     # Title
-    title_font = pg.font.Font(None, max(40, height // 30))
-    body_font = pg.font.Font(None, max(30, height // 40))
+    title_font = pg.font.Font(font_path, max(40, height // 30))
+    body_font = pg.font.Font(font_path, max(20, height // 54))
     title_surface = title_font.render("Shortcut Manual", True, BLACK)
     title_rect = title_surface.get_rect(center=(menu_x + menu_width // 2, menu_y + 30))
     screen.blit(title_surface, title_rect)
@@ -87,7 +119,7 @@ def draw_menu(width, height):
     text_spacing = max(25, height // 40)  # Adjusts spacing based on screen size
     for text in shortcuts:
         text_surface = body_font.render(text, True, BLACK)
-        screen.blit(text_surface, (menu_x + 20, text_y))
+        screen.blit(text_surface, (menu_x + 15, text_y))
         text_y += text_spacing
 
 
@@ -172,11 +204,11 @@ while running:
 
             # shift not held
             else: 
-                # Create Vertex
+                # create vertex
                 if event.key == pg.K_v:
                     circles.append(Vertex(len(circles), 0, [], WHITE, pg.mouse.get_pos()))
                 
-                # DEBUG CASE
+                # debug case -comment out later
                 elif event.key == pg.K_p:
                     print("+-----------+\n| DEBUG LOG | \n+-----------+\n")
                     
@@ -215,7 +247,7 @@ while running:
                                 circle.color = BROWN
                                 selected_vertex = circle
 
-                # Deleting Vertices and Edges
+                # deleting vertices & edges
                 elif event.key == pg.K_r:
                     mouse_x, mouse_y = pg.mouse.get_pos()
 
@@ -247,9 +279,17 @@ while running:
                             edge[1].remove_edge(edge[0])
                             edge_set.remove(edge)
                         
-
-
-
+                # shortcut menu
+                elif event.key == pg.K_s:
+                    menu_open = not menu_open
+                
+                # weighted mode
+                elif event.key == pg.K_w:
+                    weighted_mode = not weighted_mode
+               
+                # directed mode
+                elif event.key == pg.K_d:
+                    directed_mode = not directed_mode
 
 
 
@@ -298,7 +338,7 @@ while running:
     # Draw menu if open
     if menu_open:
         draw_menu(screen.get_width(), screen.get_height())
-
+    draw_settings(screen.get_width(), screen.get_height())
     pg.display.flip()
 
 pg.quit()
