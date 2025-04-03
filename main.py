@@ -1,5 +1,7 @@
 import pygame as pg
 from vertex import Vertex
+import math
+
 # Initialize pg
 pg.init()
 # Screen settings
@@ -31,12 +33,12 @@ GRAY = (150, 150, 150)
 
 
 # graph logic
-circles = []
+vertices = []
 
 edge_set = []
 
 
-dragging_circle = None
+dragging_vertex = None
 
 selected_vertex = None
 
@@ -123,13 +125,51 @@ def draw_menu(width, height):
         text_y += text_spacing
 
 
-def draw_edge(v1:Vertex, v2:Vertex):
+def draw_undirected_edge(v1:Vertex, v2:Vertex):
     if(v1 != None and v2 != None):
         pg.draw.line(screen, BLACK, v1.pos, v2.pos, EDGE_THICKNESS)
 
+ 
+
+def draw_directed_edge(v1, v2):
+    if v1 is not None and v2 is not None:
+        # Compute the direction vector
+        dx, dy = v2.pos[0] - v1.pos[0], v2.pos[1] - v1.pos[1]
+        length = math.sqrt(dx**2 + dy**2)
+        if length == 0:
+            return  # Avoid division by zero
+
+        # Normalize the direction vector
+        ux, uy = dx / length, dy / length
+
+        # Adjust the endpoint to be CIRCLE_RADIUS away from v2
+        v2_adjusted = (
+            v2.pos[0] - ux * CIRCLE_RADIUS,
+            v2.pos[1] - uy * CIRCLE_RADIUS
+        )
+
+        # Draw the main line up to the adjusted point
+        pg.draw.line(screen, BLACK, v1.pos, v2_adjusted, EDGE_THICKNESS)
+
+        # Arrowhead parameters
+        arrow_length = 10  # Length of the arrow
+        arrow_angle = math.radians(30)  # Angle of arrow wings
+
+        # Compute two points for the arrowhead
+        left_x = v2_adjusted[0] - arrow_length * (ux * math.cos(arrow_angle) - uy * math.sin(arrow_angle))
+        left_y = v2_adjusted[1] - arrow_length * (uy * math.cos(arrow_angle) + ux * math.sin(arrow_angle))
+
+        right_x = v2_adjusted[0] - arrow_length * (ux * math.cos(-arrow_angle) - uy * math.sin(-arrow_angle))
+        right_y = v2_adjusted[1] - arrow_length * (uy * math.cos(-arrow_angle) + ux * math.sin(-arrow_angle))
+
+        # Draw the arrowhead as two small lines
+        pg.draw.line(screen, BLACK, v2_adjusted, (left_x, left_y), EDGE_THICKNESS)
+        pg.draw.line(screen, BLACK, v2_adjusted, (right_x, right_y), EDGE_THICKNESS)
+
+
 def assign_indices():
-    for i in range(len(circles)):
-        circles[i].index = i
+    for i in range(len(vertices)):
+        vertices[i].index = i
 
 def is_mouse_on_edge(mpos, v1, v2, threshold=5):
     x0, y0 = mpos  # Mouse position
@@ -176,97 +216,111 @@ while running:
             # coloring with keyboard events
                 if event.key == pg.K_r:
                     mouse_x, mouse_y = pg.mouse.get_pos()
-                    for circle in circles:
-                        cx, cy = circle.pos
+                    for vertex in vertices:
+                        cx, cy = vertex.pos
                         if (cx - mouse_x) ** 2 + (cy - mouse_y) ** 2 <= CIRCLE_RADIUS ** 2:
-                            if circle.color == RED:
-                                circle.color = WHITE
+                            if vertex.color == RED:
+                                vertex.color = WHITE
                             else:
-                                circle.color = RED
+                                vertex.color = RED
                 elif event.key == pg.K_b:
                     mouse_x, mouse_y = pg.mouse.get_pos()
-                    for circle in circles:
-                        cx, cy = circle.pos
+                    for vertex in vertices:
+                        cx, cy = vertex.pos
                         if (cx - mouse_x) ** 2 + (cy - mouse_y) ** 2 <= CIRCLE_RADIUS ** 2:
-                            if circle.color == BLUE:
-                                circle.color = WHITE
+                            if vertex.color == BLUE:
+                                vertex.color = WHITE
                             else:
-                                circle.color = BLUE
+                                vertex.color = BLUE
                 elif event.key == pg.K_g:
                     mouse_x, mouse_y = pg.mouse.get_pos()
-                    for circle in circles:
-                        cx, cy = circle.pos
+                    for vertex in vertices:
+                        cx, cy = vertex.pos
                         if (cx - mouse_x) ** 2 + (cy - mouse_y) ** 2 <= CIRCLE_RADIUS ** 2:
-                            if circle.color == GREEN:
-                                circle.color = WHITE
+                            if vertex.color == GREEN:
+                                vertex.color = WHITE
                             else:
-                                 circle.color = GREEN
+                                 vertex.color = GREEN
 
             # shift not held
             else: 
                 # create vertex
                 if event.key == pg.K_v:
-                    circles.append(Vertex(len(circles), 0, [], WHITE, pg.mouse.get_pos()))
+                    vertices.append(Vertex(len(vertices), 0, [], WHITE, pg.mouse.get_pos()))
                 
                 # debug case -comment out later
                 elif event.key == pg.K_p:
                     print("+-----------+\n| DEBUG LOG | \n+-----------+\n")
                     
-                    for vertex in circles:
+                    for vertex in vertices:
                         print(f"{vertex.index}: {list(v.index for v in vertex.edges)}")
                 
                 # creating edges
                 elif event.key == pg.K_e:
                     mouse_x, mouse_y = pg.mouse.get_pos()
-                    for circle in circles:
-                        cx, cy = circle.pos
+                    for vertex in vertices:
+                        cx, cy = vertex.pos
                         if (cx - mouse_x) ** 2 + (cy - mouse_y) ** 2 <= CIRCLE_RADIUS ** 2:
     
                             # if a vertex has been selected before
                             if selected_vertex != None:
                                 # if this vertex is the same as what was selected, undo the selection
-                                if selected_vertex.index == circle.index:
+                                if selected_vertex.index == vertex.index:
                                     selected_vertex = None
-                                    circle.color = saved_color
+                                    vertex.color = saved_color
                                 else:
                                     # restore color for previously selected vertex
                                     selected_vertex.color = saved_color
 
-                                    # logically add the edges
-                                    selected_vertex.add_edge(circle)
-                                    circle.add_edge(selected_vertex)
 
-                                    edge_set.append([circle,selected_vertex])
+                                    # directed graph, only add if the exact isn't already in there
+                                    if directed_mode:
+                                        if (selected_vertex, vertex) not in edge_set:
+                                            edge_set.append((selected_vertex,vertex))
+                                            selected_vertex.add_edge(vertex)
+
+                                        else:
+                                            print(f"edge {selected_vertex.index, vertex.index} already exists!")
+                                    
+                                    # undirected graph, don't add if already exists
+                                    else:
+                                        if (selected_vertex, vertex) not in edge_set and (vertex, selected_vertex) not in edge_set :
+                                            edge_set.append((selected_vertex, vertex))
+                                            selected_vertex.add_edge(vertex)
+                                            vertex.add_edge(selected_vertex)
+                                        else:
+                                            print(f"edge {selected_vertex.index, vertex.index} already exists!")
+
 
                                     # reset selected vertex
                                     selected_vertex = None
                             
                             # if no vertex was selected before, select one
                             else:
-                                saved_color = circle.color
-                                circle.color = BROWN
-                                selected_vertex = circle
+                                saved_color = vertex.color
+                                vertex.color = BROWN
+                                selected_vertex = vertex
 
                 # deleting vertices & edges
                 elif event.key == pg.K_r:
                     mouse_x, mouse_y = pg.mouse.get_pos()
 
                     # vertices
-                    for circle in circles:
-                        cx, cy = circle.pos
+                    for vertex in vertices:
+                        cx, cy = vertex.pos
                         if (cx - mouse_x) ** 2 + (cy - mouse_y) ** 2 <= CIRCLE_RADIUS ** 2:
                             # delete
 
                             # no vertex has an edge to this vertex anymore
-                            for neighbor in circle.edges:
-                                neighbor.remove_edge(circle)
+                            for neighbor in vertex.edges:
+                                neighbor.remove_edge(vertex)
 
-                            circles.remove(circle)
+                            vertices.remove(vertex)
                             
                             # delete from edge_set
                             new_edge_set = []
                             for uv in edge_set:
-                                if uv[0].index != circle.index and uv[1].index != circle.index:
+                                if uv[0].index != vertex.index and uv[1].index != vertex.index:
                                     new_edge_set.append(uv)
                             edge_set = new_edge_set
                             assign_indices()
@@ -300,18 +354,18 @@ while running:
             if button_rect(screen.get_width()).collidepoint(mouse_x, mouse_y):
                 menu_open = not menu_open
             # if clicked on a vertex
-            for circle in circles:
-                cx, cy = circle.pos
+            for vertex in vertices:
+                cx, cy = vertex.pos
                 if (cx - mouse_x) ** 2 + (cy - mouse_y) ** 2 <= CIRCLE_RADIUS ** 2:
-                    circle.dragging = True
-                    dragging_circle = circle
+                    vertex.dragging = True
+                    dragging_vertex = vertex
         elif event.type == pg.MOUSEBUTTONUP:
-            if dragging_circle:
-                dragging_circle.dragging = False
-                dragging_circle = None
+            if dragging_vertex:
+                dragging_vertex.dragging = False
+                dragging_vertex = None
         elif event.type == pg.MOUSEMOTION:
-            if dragging_circle:
-                dragging_circle.pos = event.pos
+            if dragging_vertex:
+                dragging_vertex.pos = event.pos
 
 
 
@@ -319,16 +373,20 @@ while running:
 
     # Draw all edges
     for edge in edge_set:
-        draw_edge(edge[0], edge[1])
-        
-    # Draw all circles
-    for circle in circles:
-        pg.draw.circle(screen, circle.color, circle.pos, CIRCLE_RADIUS)
-        pg.draw.circle(screen, BLACK, circle.pos, CIRCLE_RADIUS, CIRCLE_BORDER_THICKNESS)  # Black border
+        if directed_mode:
+            draw_directed_edge(edge[0], edge[1])
+        else:
+            draw_undirected_edge(edge[0], edge[1])
+
+
+    # Draw all vertices
+    for vertex in vertices:
+        pg.draw.circle(screen, vertex.color, vertex.pos, CIRCLE_RADIUS)
+        pg.draw.circle(screen, BLACK, vertex.pos, CIRCLE_RADIUS, CIRCLE_BORDER_THICKNESS)  # Black border
 
          # write indeces:
-        text_surface = font.render(str(circle.index), True, BLACK)
-        text_rect = text_surface.get_rect(center=circle.pos)
+        text_surface = font.render(str(vertex.index), True, BLACK)
+        text_rect = text_surface.get_rect(center=vertex.pos)
         screen.blit(text_surface, text_rect)
     # Draw Menu
     # Draw manual button
