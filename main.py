@@ -7,7 +7,7 @@ pg.init()
 # Screen settings
 WIDTH, HEIGHT = 1920, 1080
 screen = pg.display.set_mode((WIDTH, HEIGHT), pg.RESIZABLE)
-pg.display.set_caption("graphmaker -version 1.4")
+pg.display.set_caption("graphmaker -v1.5")
 
 # Initialize font
 font_path = "assets/fonts/UbuntuMono-Regular.ttf"  # Adjust path if needed
@@ -236,9 +236,17 @@ while running:
                 # debug case -comment out later
                 elif event.key == pg.K_p:
                     print("+-----------+\n| DEBUG LOG | \n+-----------+\n")
+
+                    edges = G.get_edges()
+                    for i in range(len(edges)):
+                        print(f"{i}: {list(v for v in edges[i])}")
                     
+                    # PRINT EDGES
+                    """
                     for vertex in G.vertices:
-                        print(f"{vertex.index}: {list(v.index for v in vertex.edges)}")
+                        print(f"{vertex.index}: \n {list(v.get_other(vertex).index for v in vertex.edges)}")
+                        print(f" {list(v.get_other(vertex).index for v in vertex.implied_edges)}")
+                    """
                 
                 # creating edges
                 elif event.key == pg.K_e:

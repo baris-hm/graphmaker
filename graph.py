@@ -24,7 +24,10 @@ class Graph:
         e = Edge(u,v)
         if e not in self.edges:
             self.edges.append(e)
+            self.implied_edges.append(Edge(v,u))
             u.add_edge(v)
+            
+
 
     def remove_edge(self, e: Edge):
         reverse_edge = Edge(e.v, e.u)
@@ -70,4 +73,15 @@ class Graph:
         for i in range(len(self.vertices)):
             self.vertices[i].index = i
     
+    def get_edges(self):
+        # edges[i] has all vertices adjacent to vertex i, O(n^2)
+        edges = []
+        for vertex in self.vertices:
+            edges.append(list(neighbor.get_other(vertex).index for neighbor in vertex.edges))
         
+        # now if undirected, we add the implied edges on top of this
+        if not self.directed:
+            for vertex in self.vertices:
+                for neighbor in vertex.implied_edges:
+                    edges[vertex.index].append(neighbor.get_other(vertex).index)
+        return edges

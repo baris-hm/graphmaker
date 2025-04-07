@@ -20,6 +20,12 @@ class Edge:
         self.capacity = capacity
         self.flow_value = flow_value
     
+    def get_other(self, vertex):
+        if vertex == self.u:
+            return self.v
+        else:
+            return self.u
+    
     def is_eq_undirected(self, other):
         if other == None:
             return False

@@ -24,7 +24,8 @@ class Vertex:
         edge = Edge(self,vertex)
         if not edge in self.edges:
             self.edges.append(edge)
-            self.implied_edges.append(Edge(vertex, self))
+            vertex.implied_edges.append(Edge(vertex, self))
+
         self.degree += 1
         
     def remove_edge(self, vertex):
