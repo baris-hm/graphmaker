@@ -20,8 +20,8 @@ This is a small desktop-app using **Pygame** that lets you create & visualize gr
 ```bash
 main_folder/
 │── main.py              # run this
-│── vertex.py            # vertices as a data structure
-│── old versions/        # not relevant, lesser features
+│── vertex.py            # vertex class
+│── edge.py              # edge class
 │── assets/  
 │   ├── fonts/  
 │   │   ├── UbuntuMono-Regular.ttf  
@@ -30,7 +30,6 @@ main_folder/
 
 ## TODO
 - Make weighted graphs by taking user input
-- Make directed graphs
 - Two set - mapping view for bipartite graphs
 - BFS & DFS & Dijkstra tools
 - Flow-Algorithm tools
