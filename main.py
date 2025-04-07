@@ -1,5 +1,5 @@
 import pygame as pg
-from vertex import Vertex
+from graph import Graph
 import math
 
 # Initialize pg
@@ -33,17 +33,16 @@ GRAY = (150, 150, 150)
 
 
 # graph logic
-vertices = []
 
-edge_set = []
-
+# create the graph
+G = Graph()
 
 dragging_vertex = None
-
 selected_vertex = None
-
 saved_color = WHITE
 
+# toggles
+menu_open = False
 
 # drawing the menu
 
@@ -51,11 +50,10 @@ saved_color = WHITE
 def button_rect(width):
     return pg.Rect(width-(MANUAL_BUTTON_SIZE+10), 10, MANUAL_BUTTON_SIZE, MANUAL_BUTTON_SIZE)  # Manual button
 
-# toggles
-menu_open = False
-directed_mode = False
-weighted_mode = False
-
+def mouse_on_vertex(v, pos: tuple):
+    mouse_x, mouse_y = pos
+    cx, cy = vertex.pos
+    return (cx - mouse_x) ** 2 + (cy - mouse_y) ** 2 <= CIRCLE_RADIUS ** 2
 
 def draw_settings(width, height):
     menu_width, menu_height = width // 6, height // 10
@@ -72,8 +70,8 @@ def draw_settings(width, height):
     # texts
     texts = [
         "",
-        f"Weighted Mode: {'On' if weighted_mode else 'Off'}", 
-        f"Directed Mode: {'On' if directed_mode else 'Off'}"
+        f"Weighted Mode: {'On' if G.weighted else 'Off'}", 
+        f"Directed Mode: {'On' if G.directed else 'Off'}"
     ]
     
     text_y = menu_y
@@ -124,12 +122,9 @@ def draw_menu(width, height):
         screen.blit(text_surface, (menu_x + 15, text_y))
         text_y += text_spacing
 
-
-def draw_undirected_edge(v1:Vertex, v2:Vertex):
+def draw_undirected_edge(v1, v2):
     if(v1 != None and v2 != None):
-        pg.draw.line(screen, BLACK, v1.pos, v2.pos, EDGE_THICKNESS)
-
- 
+        pg.draw.line(screen, BLACK, v1.pos, v2.pos, EDGE_THICKNESS) 
 
 def draw_directed_edge(v1, v2):
     if v1 is not None and v2 is not None:
@@ -166,11 +161,6 @@ def draw_directed_edge(v1, v2):
         pg.draw.line(screen, BLACK, v2_adjusted, (left_x, left_y), EDGE_THICKNESS)
         pg.draw.line(screen, BLACK, v2_adjusted, (right_x, right_y), EDGE_THICKNESS)
 
-
-def assign_indices():
-    for i in range(len(vertices)):
-        vertices[i].index = i
-
 def is_mouse_on_edge(mpos, v1, v2, threshold=5):
     x0, y0 = mpos  # Mouse position
     x1, y1 = v1.pos[0], v1.pos[1]              # Line start
@@ -200,7 +190,7 @@ running = True
 while running:
 
     screen.fill(BACKGROUND_COLOR) 
-    
+
     for event in pg.event.get():
         # Quit Logic
         if event.type == pg.QUIT:
@@ -215,28 +205,23 @@ while running:
 
             # coloring with keyboard events
                 if event.key == pg.K_r:
-                    mouse_x, mouse_y = pg.mouse.get_pos()
-                    for vertex in vertices:
+                    for vertex in G.vertices:
                         cx, cy = vertex.pos
-                        if (cx - mouse_x) ** 2 + (cy - mouse_y) ** 2 <= CIRCLE_RADIUS ** 2:
+                        if mouse_on_vertex(vertex, pg.mouse.get_pos()):
                             if vertex.color == RED:
                                 vertex.color = WHITE
                             else:
                                 vertex.color = RED
                 elif event.key == pg.K_b:
-                    mouse_x, mouse_y = pg.mouse.get_pos()
-                    for vertex in vertices:
-                        cx, cy = vertex.pos
-                        if (cx - mouse_x) ** 2 + (cy - mouse_y) ** 2 <= CIRCLE_RADIUS ** 2:
+                    for vertex in G.vertices:
+                        if mouse_on_vertex(vertex, pg.mouse.get_pos()):
                             if vertex.color == BLUE:
                                 vertex.color = WHITE
                             else:
                                 vertex.color = BLUE
                 elif event.key == pg.K_g:
-                    mouse_x, mouse_y = pg.mouse.get_pos()
-                    for vertex in vertices:
-                        cx, cy = vertex.pos
-                        if (cx - mouse_x) ** 2 + (cy - mouse_y) ** 2 <= CIRCLE_RADIUS ** 2:
+                    for vertex in G.vertices:
+                        if mouse_on_vertex(vertex, pg.mouse.get_pos()):
                             if vertex.color == GREEN:
                                 vertex.color = WHITE
                             else:
@@ -246,22 +231,22 @@ while running:
             else: 
                 # create vertex
                 if event.key == pg.K_v:
-                    vertices.append(Vertex(len(vertices), 0, [], WHITE, pg.mouse.get_pos()))
+                    G.add_vertex(pg.mouse.get_pos())
                 
                 # debug case -comment out later
                 elif event.key == pg.K_p:
                     print("+-----------+\n| DEBUG LOG | \n+-----------+\n")
                     
-                    for vertex in vertices:
+                    for vertex in G.vertices:
                         print(f"{vertex.index}: {list(v.index for v in vertex.edges)}")
                 
                 # creating edges
                 elif event.key == pg.K_e:
-                    mouse_x, mouse_y = pg.mouse.get_pos()
-                    for vertex in vertices:
-                        cx, cy = vertex.pos
-                        if (cx - mouse_x) ** 2 + (cy - mouse_y) ** 2 <= CIRCLE_RADIUS ** 2:
-    
+                    for vertex in G.vertices:
+                        if mouse_on_vertex(vertex, pg.mouse.get_pos()):
+
+                            # SELECTION AND COLORING
+
                             # if a vertex has been selected before
                             if selected_vertex != None:
                                 # if this vertex is the same as what was selected, undo the selection
@@ -273,23 +258,8 @@ while running:
                                     selected_vertex.color = saved_color
 
 
-                                    # directed graph, only add if the exact isn't already in there
-                                    if directed_mode:
-                                        if (selected_vertex, vertex) not in edge_set:
-                                            edge_set.append((selected_vertex,vertex))
-                                            selected_vertex.add_edge(vertex)
-
-                                        else:
-                                            print(f"edge {selected_vertex.index, vertex.index} already exists!")
-                                    
-                                    # undirected graph, don't add if already exists
-                                    else:
-                                        if (selected_vertex, vertex) not in edge_set and (vertex, selected_vertex) not in edge_set :
-                                            edge_set.append((selected_vertex, vertex))
-                                            selected_vertex.add_edge(vertex)
-                                            vertex.add_edge(selected_vertex)
-                                        else:
-                                            print(f"edge {selected_vertex.index, vertex.index} already exists!")
+                                    # add edge logically
+                                    G.add_edge(selected_vertex, vertex)
 
 
                                     # reset selected vertex
@@ -303,35 +273,18 @@ while running:
 
                 # deleting vertices & edges
                 elif event.key == pg.K_r:
-                    mouse_x, mouse_y = pg.mouse.get_pos()
 
                     # vertices
-                    for vertex in vertices:
-                        cx, cy = vertex.pos
-                        if (cx - mouse_x) ** 2 + (cy - mouse_y) ** 2 <= CIRCLE_RADIUS ** 2:
+                    for vertex in G.vertices:
+                        if mouse_on_vertex(vertex, pg.mouse.get_pos()):
                             # delete
-
-                            # no vertex has an edge to this vertex anymore
-                            for neighbor in vertex.edges:
-                                neighbor.remove_edge(vertex)
-
-                            vertices.remove(vertex)
-                            
-                            # delete from edge_set
-                            new_edge_set = []
-                            for uv in edge_set:
-                                if uv[0].index != vertex.index and uv[1].index != vertex.index:
-                                    new_edge_set.append(uv)
-                            edge_set = new_edge_set
-                            assign_indices()
+                            G.remove_vertex(vertex)
 
                     # edges        
-                    for edge in edge_set:
-                        if is_mouse_on_edge(pg.mouse.get_pos(), edge[0], edge[1]):
+                    for edge in G.edges:
+                        if is_mouse_on_edge(pg.mouse.get_pos(), edge.u, edge.v):
                             # delete
-                            edge[0].remove_edge(edge[1])
-                            edge[1].remove_edge(edge[0])
-                            edge_set.remove(edge)
+                            G.remove_edge(edge)
                         
                 # shortcut menu
                 elif event.key == pg.K_s:
@@ -339,11 +292,11 @@ while running:
                 
                 # weighted mode
                 elif event.key == pg.K_w:
-                    weighted_mode = not weighted_mode
+                    G.weighted = not G.weighted
                
                 # directed mode
                 elif event.key == pg.K_d:
-                    directed_mode = not directed_mode
+                    G.directed = not G.directed
 
 
 
@@ -354,9 +307,8 @@ while running:
             if button_rect(screen.get_width()).collidepoint(mouse_x, mouse_y):
                 menu_open = not menu_open
             # if clicked on a vertex
-            for vertex in vertices:
-                cx, cy = vertex.pos
-                if (cx - mouse_x) ** 2 + (cy - mouse_y) ** 2 <= CIRCLE_RADIUS ** 2:
+            for vertex in G.vertices:
+                if mouse_on_vertex(vertex, pg.mouse.get_pos()):
                     vertex.dragging = True
                     dragging_vertex = vertex
         elif event.type == pg.MOUSEBUTTONUP:
@@ -372,15 +324,21 @@ while running:
     
 
     # Draw all edges
-    for edge in edge_set:
-        if directed_mode:
-            draw_directed_edge(edge[0], edge[1])
+
+ 
+        
+
+    
+    for edge in G.edges:
+        if G.directed:
+            draw_directed_edge(edge.u, edge.v)
         else:
-            draw_undirected_edge(edge[0], edge[1])
+            draw_undirected_edge(edge.u, edge.v)
+
 
 
     # Draw all vertices
-    for vertex in vertices:
+    for vertex in G.vertices:
         pg.draw.circle(screen, vertex.color, vertex.pos, CIRCLE_RADIUS)
         pg.draw.circle(screen, BLACK, vertex.pos, CIRCLE_RADIUS, CIRCLE_BORDER_THICKNESS)  # Black border
 
@@ -388,14 +346,17 @@ while running:
         text_surface = font.render(str(vertex.index), True, BLACK)
         text_rect = text_surface.get_rect(center=vertex.pos)
         screen.blit(text_surface, text_rect)
+    
     # Draw Menu
     # Draw manual button
     pg.draw.rect(screen, BLACK, button_rect(screen.get_width()))
     text_surface = font.render("?", True, WHITE)
     screen.blit(text_surface, (button_rect(screen.get_width()).x + 12, button_rect(screen.get_width()).y + 5))
+
     # Draw menu if open
     if menu_open:
         draw_menu(screen.get_width(), screen.get_height())
+
     draw_settings(screen.get_width(), screen.get_height())
     pg.display.flip()
 
