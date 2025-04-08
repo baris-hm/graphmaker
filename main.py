@@ -104,15 +104,15 @@ def draw_menu(width, height):
         "",
         "V - Add a VERTEX at the mouse position",
         "",
-        "E - Select a vertex to add an EDGE from, then press E on another vertex to add the edge to ",
+        "E - Select two vertices : create an EDGE inbetween - Select an edge: edit EDGE values",
         "",
         "R - REMOVE the vertex or edge the mouse is on",
         "",
         "Shift + R/G/B - Change vertex color to Red/Green/Blue - use same color again to erase",
         "", 
-        "D - Toggle DIRECTED mode: when adding an edge from now on, make it directed",
+        "D - Toggle DIRECTED mode: all edges are now directed",
         "", 
-        "W - Toggle WEIGHTED mode: when adding an edge from now on, accepts weight input"
+        "W - Toggle WEIGHTED mode: all edges are now weighted, pressing \"e\" on an edge edits values"
     ]
     
     text_y = menu_y + 70
