@@ -7,7 +7,7 @@ pg.init()
 # Screen settings
 WIDTH, HEIGHT = 1920, 1080
 screen = pg.display.set_mode((WIDTH, HEIGHT), pg.RESIZABLE)
-pg.display.set_caption("graphmaker -version 1.4")
+pg.display.set_caption("graphmaker -v1.5")
 
 # Initialize font
 font_path = "assets/fonts/UbuntuMono-Regular.ttf"  # Adjust path if needed
@@ -104,15 +104,15 @@ def draw_menu(width, height):
         "",
         "V - Add a VERTEX at the mouse position",
         "",
-        "E - Select a vertex to add an EDGE from, then press E on another vertex to add the edge to ",
+        "E - Select two vertices : create an EDGE inbetween - Select an edge: edit EDGE values",
         "",
         "R - REMOVE the vertex or edge the mouse is on",
         "",
         "Shift + R/G/B - Change vertex color to Red/Green/Blue - use same color again to erase",
         "", 
-        "D - Toggle DIRECTED mode: when adding an edge from now on, make it directed",
+        "D - Toggle DIRECTED mode: all edges are now directed",
         "", 
-        "W - Toggle WEIGHTED mode: when adding an edge from now on, accepts weight input"
+        "W - Toggle WEIGHTED mode: all edges are now weighted, pressing \"e\" on an edge edits values"
     ]
     
     text_y = menu_y + 70
@@ -236,9 +236,17 @@ while running:
                 # debug case -comment out later
                 elif event.key == pg.K_p:
                     print("+-----------+\n| DEBUG LOG | \n+-----------+\n")
+
+                    edges = G.get_edges()
+                    for i in range(len(edges)):
+                        print(f"{i}: {list(v for v in edges[i])}")
                     
+                    # PRINT EDGES
+                    """
                     for vertex in G.vertices:
-                        print(f"{vertex.index}: {list(v.index for v in vertex.edges)}")
+                        print(f"{vertex.index}: \n {list(v.get_other(vertex).index for v in vertex.edges)}")
+                        print(f" {list(v.get_other(vertex).index for v in vertex.implied_edges)}")
+                    """
                 
                 # creating edges
                 elif event.key == pg.K_e:
