@@ -5,7 +5,7 @@ import math
 # Initialize pg
 pg.init()
 # Screen settings
-WIDTH, HEIGHT = 1920, 1080
+WIDTH, HEIGHT = pygame.display.get_desktop_sizes()[0]
 screen = pg.display.set_mode((WIDTH, HEIGHT), pg.RESIZABLE)
 pg.display.set_caption("graphmaker -v1.5")
 
